@@ -19,7 +19,7 @@ class Assistant:
         knn = NearestNeighbors(metric='euclidean', algorithm='brute')
         knn.fit(centroids)
 
-        distances, indices = knn.kneighbors(centroid, n_neighbors=num_clusters + 1)
+        distances, indices = knn.kneighbors(centroid, n_neighbors=num_clusters)
         distances = distances.flatten()
         nearest_neighbors = indices.flatten()
         nearest_centroids = centroids[nearest_neighbors]
@@ -34,9 +34,9 @@ class Assistant:
                 key_word_count += 1
                 if key_word_count == 3:
                     break
-        cluster_list = [{'index': cluster_id, 'name': key_words, 'confidence': 1}]
+        cluster_list = [{'index': cluster_id, 'name': key_words, 'confidence': 100}]
 
-        for i in range(num_clusters):
+        for i in range(num_clusters - 1):
             cluster = {'index': nearest_neighbors[i], 'name': "", 'confidence': 0}
 
             centroid = nearest_centroids[i]
@@ -49,7 +49,7 @@ class Assistant:
                     if key_word_count == 3:
                         break
             cluster['name'] = key_words
-            cluster['confidence'] = (1 - distances[i]/distances[-1]) * 100
+            cluster['confidence'] = (distances[-1] - distances[i])/(distances[-1] - distances[0]) * 100
 
             cluster_list.append(cluster)
 
@@ -68,7 +68,7 @@ class Assistant:
         question_list = []
         for i in range(num_clusters):
             question_row = data_frame.loc[indices[i]]
-            question = [{'question': question_row['question'], 'answer': question_row['answer'], 'confidence': (1 - distances[i]/distances[-1]) * 100}]
+            question = [{'question': question_row['question'], 'answer': question_row['answer'], 'confidence': (distances[-1] - distances[i])/(distances[-1] - distances[0]) * 100}]
             question_list.append(question[0])
 
         return question_list
