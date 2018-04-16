@@ -16,10 +16,20 @@ gramem_list = ['NOUN', "ADJF", "ADJS", "VERB", "INFN", "PRTF", "PRTS", "GRND"]
 stopwords = nltk.corpus.stopwords.words('russian')
 stopwords += ["мочь", "пожалуйста", "сбербанк", "быть", "банк", "банка"]
 
-#Lemmatization
+
+# Filters
+def filter_question(question):
+    is_accepted = True
+    is_accepted = is_accepted and len(question.split()) > 2
+    is_accepted = is_accepted and len(question) > 20
+    return is_accepted
+
+
+# Lemmatization
 def lemmatize_strings(string_list):
-    new_list = [morph.parse(string)[0].normal_form for string in string_list if (morph.parse(string)[0].tag.POS in gramem_list or string == vklink) and not in stopwords]
+    new_list = [morph.parse(string)[0].normal_form for string in string_list if (morph.parse(string)[0].tag.POS in gramem_list or string == vklink) and morph.parse(string)[0].normal_form not in stopwords]
     return new_list
+
 
 # Preprocessing
 def preprocess_question(question):
