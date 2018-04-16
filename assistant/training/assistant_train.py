@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import os
 
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -11,7 +12,7 @@ from assistant.settings import BASE_DIR
 
 class AssistantTrainer:
     base_data_path = "data/base_data_vk.csv"
-    prepared_data_path = "data/processed_data_vk.csv"
+    prepared_data_path = os.path.join(BASE_DIR, "assistant/training/data/processed_data_vk.csv")
     prepared_field_name = 'process'
 
     def preprocess_query(self, query):
@@ -41,13 +42,18 @@ class AssistantTrainer:
         data_frame = self.load_prepared_data()
 
         vectorizer = TfidfVectorizer(max_features=10000, max_df=0.5, norm='l2', ngram_range=(1, 2))
-        vectorizer.fit(data_frame[self.prepared_field_name])
+        transform_matrix = vectorizer.fit_transform(data_frame[self.prepared_field_name])
+        np.savez(os.path.join(BASE_DIR, "assistant/prepared_modules/laws_tf_idf.npz", data=transform_matrix.data, indices=transform_matrix.indices,
+                 indptr=transform_matrix.indptr, shape=transform_matrix.shape))
         joblib.dump(vectorizer, os.path.join(BASE_DIR, "assistant/prepared_modules/tfidf_vectorizer_10000_ngram_12.pkl"))
 
         return vectorizer
 
+    def load_transform_matrix(self):
+        return self.vectorizer.transform(self.load_prepared_data()[self.prepared_field_name])
+
     def load_vectorizer(self):
-        vectorizer = joblib.load(os.path.join(BASE_DIR, "assistant/training/tfidf_vectorizer_10000_ngram_12.pkl"))
+        vectorizer = joblib.load(os.path.join(BASE_DIR, "assistant/prepared_modules/tfidf_vectorizer_10000_ngram_12.pkl"))
         return vectorizer
 
     def vectorize_query(self, query):
@@ -77,6 +83,7 @@ class AssistantTrainer:
         self.vectorizer = self.load_vectorizer()
         self.clf = self.load_clustering()
         print("Ready!")
+
 
 if __name__ == "__main__":
     assistant = AssistantTrainer()
