@@ -1,23 +1,22 @@
 import pandas as pd
-import numpy as np
-import nltk
+import os
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import Normalizer
-from sklearn import metrics
-from sklearn.decomposition import TruncatedSVD
-from sklearn.metrics import pairwise_distances_argmin_min
 from sklearn.externals import joblib
 
 from assistant.training.preprocess.preprocess import filter_question, preprocess_question
+from assistant.settings import BASE_DIR
 
 
 class AssistantTrainer:
     base_data_path = "data/base_data_vk.csv"
     prepared_data_path = "data/processed_data_vk.csv"
     prepared_field_name = 'process'
+
+    def preprocess_query(self, query):
+        preprocess_string = preprocess_question(query)
+        return preprocess_string
 
     def prepare_data(self):
         data_frame = pd.read_csv(self.base_data_path)
@@ -43,13 +42,18 @@ class AssistantTrainer:
 
         vectorizer = TfidfVectorizer(max_features=10000, max_df=0.5, norm='l2', ngram_range=(1, 2))
         vectorizer.fit(data_frame[self.prepared_field_name])
-        joblib.dump(vectorizer, 'prepared_modules/tfidf_vectorizer_10000_ngram_12.pkl')
+        joblib.dump(vectorizer, os.path.join(BASE_DIR, "assistant/prepared_modules/tfidf_vectorizer_10000_ngram_12.pkl"))
 
         return vectorizer
 
     def load_vectorizer(self):
-        vectorizer = joblib.load('prepared_modules/tfidf_vectorizer_10000_ngram_12.pkl')
+        vectorizer = joblib.load(os.path.join(BASE_DIR, "assistant/training/tfidf_vectorizer_10000_ngram_12.pkl"))
         return vectorizer
+
+    def vectorize_query(self, query):
+        preprocessed_query = preprocess_question(query)
+        vector = self.vectorizer.transform([preprocessed_query])
+        return vector
 
     def get_train_vectors(self):
         data_frame = self.load_prepared_data()
@@ -62,9 +66,18 @@ class AssistantTrainer:
         clf = KMeans(init='k-means++', max_iter=1000, n_clusters=num_clusters, n_init=15, n_jobs=2, random_state=241)
         vectors = self.get_train_vectors()
         clf.fit(vectors)
-        joblib.dump(clf, 'prepared_modules/kmeans_60.pkl')
+        joblib.dump(clf, os.path.join(BASE_DIR, "assistant/prepared_modules/kmeans_60.pkl"))
         return clf
 
     def load_clustering(self):
-        clf = joblib.load('prepared_modules/kmeans_60.pkl')
+        clf = joblib.load(os.path.join(BASE_DIR, "assistant/prepared_modules/kmeans_60.pkl"))
         return clf
+
+    def __init__(self):
+        self.vectorizer = self.load_vectorizer()
+        self.clf = self.load_clustering()
+        print("Ready!")
+
+if __name__ == "__main__":
+    assistant = AssistantTrainer()
+    vect = assistant.load_vectorizer()
