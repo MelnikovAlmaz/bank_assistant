@@ -86,7 +86,7 @@ class Assistant:
         distances, indices = knn.kneighbors(vector, n_neighbors=num_clusters + 1)  # Find nearest questions
         indices = indices.flatten()
         distances = distances.flatten()
-        
+
         question_list = []
         for i in range(num_clusters):
             question_row = data_frame.loc[indices[i]]

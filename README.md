@@ -38,3 +38,16 @@ Model pipeline structure is:
 #### Preprocess and filter
 Preprocessing operations are implemented in _assistant/training/preprocess.py_ module.
 There are used lemmatization ,removing stopwords, converting vk links to word "vklink".
+
+#### Tf-Idf Vectorizer
+Transforming documents to vectors is provided by TF-IDF vectorizer.
+Parameters of vectorizer are:
+1. Ngram range is (1, 2). Bigrams are added because pairs of words also provides userful information. Example: "Получить кредит", "Получить карту"
+2. Max features = 10000.
+3. L2 normalization.
+
+#### KMeans
+Model uses KMeans algorithm to find clusters and their centroids.
+Centroids' coordinates can be used to find closest 5 clusters.
+
+Nearest neighbours algorithm is used to find 5 similar questions.
