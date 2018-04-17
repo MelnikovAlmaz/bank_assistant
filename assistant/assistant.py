@@ -7,28 +7,37 @@ class Assistant:
     assistant_trainer = AssistantTrainer()
 
     def get_nearest_clusters(self, query, num_clusters):
-        # Find cluster
-        vector = self.assistant_trainer.vectorize_query(query)
-        clf = self.assistant_trainer.clf
-        cluster_id = clf.predict(vector)[0]
+        """
+        Method find similar clusters for user questions.
+        :param query: Question from user, type: string
+        :param num_clusters: Number of clusters to show, type: int
+        :return: List of similar clusters. type: list of dicts, each dict in format
+        {'index': , 'name': , 'confidence': }
+        """
+        # Find cluster for question
+        vector = self.assistant_trainer.vectorize_query(query)  # Convert question to vector
+        clf = self.assistant_trainer.clf  # Load clustering model
+        cluster_id = clf.predict(vector)[0]  # Predict cluster
 
-        # Find cluster centroid coords
+        # Find cluster centroid vector
         centroid = clf.cluster_centers_.argsort()[cluster_id:cluster_id + 1, ::-1]
 
-        centroids = self.assistant_trainer.clf.cluster_centers_.argsort()
+        centroids = self.assistant_trainer.clf.cluster_centers_.argsort()  # Get all centroids
         knn = NearestNeighbors(metric='euclidean', algorithm='brute')
         knn.fit(centroids)
 
-        distances, indices = knn.kneighbors(centroid, n_neighbors=num_clusters)
-        distances = distances.flatten()
-        nearest_neighbors = indices.flatten()
-        nearest_centroids = centroids[nearest_neighbors]
+        distances, indices = knn.kneighbors(centroid, n_neighbors=num_clusters)  # Find nearest clusters to centroid
+        distances = distances.flatten()  # Convert to 1-d list
+        nearest_neighbors_index = indices.flatten()  # Convert to 1-d list
+        nearest_centroids = centroids[nearest_neighbors_index]
 
+        # Load vocabulary of vectorizer
         vocabulary = self.assistant_trainer.vectorizer.get_feature_names()
 
+        # Find top 3 bigrams for cluster
         key_words = ""
         key_word_count = 0
-        for ind in centroid[0]:  # replace 6 with n words per cluster
+        for ind in centroid[0]:
             if len(vocabulary[ind].split()) > 1:
                 key_words += ' %s' % vocabulary[ind]
                 key_word_count += 1
@@ -36,10 +45,13 @@ class Assistant:
                     break
         cluster_list = [{'index': cluster_id, 'name': key_words, 'confidence': 100}]
 
+        # Process nearest clusters
         for i in range(num_clusters - 1):
-            cluster = {'index': nearest_neighbors[i], 'name': "", 'confidence': 0}
+            cluster = {'index': nearest_neighbors_index[i], 'name': "", 'confidence': 0}
 
             centroid = nearest_centroids[i]
+
+            # Find top 3 bigrams for cluster
             key_words = ""
             key_word_count = 0
             for ind in centroid:  # replace 6 with n words per cluster
@@ -56,15 +68,25 @@ class Assistant:
         return cluster_list
 
     def get_nearest_questions(self, query, num_clusters):
-        vector = self.assistant_trainer.vectorize_query(query)
-        data_frame = self.assistant_trainer.load_prepared_data()
+        """
+        Method find similar questions for user question and provide answer with some confidence.
 
+        :param query: Question from user, type: string
+        :param num_clusters: Number of clusters to show, type: int
+        :return: List of similar questions. type: list of dicts, each dict in format
+        {'question': , 'answer': , 'confidence': }
+        """
+        vector = self.assistant_trainer.vectorize_query(query)  # Convert question to vector
+        data_frame = self.assistant_trainer.load_prepared_data()  # Load train data frame
+
+        # Fit KNN model by train data
         knn = NearestNeighbors(metric='euclidean', algorithm='brute')
         knn.fit(self.assistant_trainer.vectorizer.transform(data_frame[self.assistant_trainer.prepared_field_name]))
 
-        distances, indices = knn.kneighbors(vector, n_neighbors=num_clusters + 1)
+        distances, indices = knn.kneighbors(vector, n_neighbors=num_clusters + 1)  # Find nearest questions
         indices = indices.flatten()
         distances = distances.flatten()
+        
         question_list = []
         for i in range(num_clusters):
             question_row = data_frame.loc[indices[i]]
